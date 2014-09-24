@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache;
+package org.apache.log.extractor;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;

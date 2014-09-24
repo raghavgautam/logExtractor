@@ -16,10 +16,28 @@
  * limitations under the License.
  */
 
-package org.apache;
+package org.apache.log.extractor;
 
-import java.io.IOException;
+import java.util.ArrayList;
 
-public interface LineReader {
-    String readLine() throws IOException;
+public class LogRecord extends ArrayList<String> {
+    private final String id;
+    public LogRecord(String id) {
+        super();
+        this.id = id;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (String s : this) {
+            stringBuilder.append(s + "\n");
+        }
+
+        return stringBuilder.toString();
+    }
+
+    public String getId() {
+        return id;
+    }
 }

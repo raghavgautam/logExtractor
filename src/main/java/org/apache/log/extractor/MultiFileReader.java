@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache;
+package org.apache.log.extractor;
 
 import org.apache.commons.io.IOUtils;
 
