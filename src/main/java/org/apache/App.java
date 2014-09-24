@@ -29,7 +29,7 @@ public class App {
     private App() {
         logger.info("***Starting App***");
         try {
-            config = new PropertiesConfiguration("logExtractor.properties");
+            config = new CustomPropertiesConfiguration("logExtractor.properties");
         } catch (ConfigurationException e) {
             throw new RuntimeException(e);
         }
