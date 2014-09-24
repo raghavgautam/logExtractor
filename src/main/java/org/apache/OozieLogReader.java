@@ -14,15 +14,15 @@ public class OozieLogReader implements LogReader {
     private static final Pattern jobRegex = Pattern.compile(JOB_REGEX);
     LineReader lineReader;
     LogRecord readAhead;
-    final String recordPrefix;
+    final String RECORD_REGEX = App.getConfig().getString("log.oozie.record.regex");
+    final Pattern recordRegex = Pattern.compile(RECORD_REGEX);
 
-    private OozieLogReader(LineReader lineReader, String recordPrefix) {
+    private OozieLogReader(LineReader lineReader) {
         this.lineReader = lineReader;
-        this.recordPrefix = recordPrefix;
     }
 
-    public static LogReader getInstance(LineReader lineReader, String recordPrefix) {
-        return new OozieLogReader(lineReader, recordPrefix);
+    public static LogReader getInstance(LineReader lineReader) {
+        return new OozieLogReader(lineReader);
     }
 
     @Override
@@ -65,7 +65,8 @@ public class OozieLogReader implements LogReader {
     }
 
     private boolean isNewRecord(String line) {
-        return line.startsWith(recordPrefix);
+        final Matcher matcher = recordRegex.matcher(line);
+        return matcher.find();
     }
 
     public static String getJobId(String line) {

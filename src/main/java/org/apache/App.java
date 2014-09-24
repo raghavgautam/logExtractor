@@ -62,7 +62,7 @@ public class App {
         final List<File> logFiles = app.getLogFiles();
         LineReader reader = new MultiFileReader(logFiles);
         final LogReader logReader =
-            OozieLogReader.getInstance(reader, config.getString("log.oozie.prefix"));
+            OozieLogReader.getInstance(reader);
         for (LogRecord record = logReader.readRecord(); record != null; record = logReader.readRecord()) {
             if (!StringUtils.isEmpty(record.getId())) {
                 app.getWriter(record.getId()).write(record.toString());
