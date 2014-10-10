@@ -20,6 +20,7 @@ package org.apache.log.extractor;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -56,8 +57,13 @@ public class App {
     private Writer getWriter(String id) throws IOException {
         Writer writer = files.get(id);
         if(writer == null) {
-            writer = new BufferedWriter(
-                new FileWriter(config.getString("log.oozie.write.location") + id + ".txt"));
+            final String fileName = config.getString("log.oozie.write.location") + id + ".txt";
+            final File parentFile = new File(fileName).getParentFile();
+            if (!parentFile.exists()) {
+                logger.warn("Creating directory for output logs: " + parentFile);
+                FileUtils.forceMkdir(parentFile);
+            }
+            writer = new BufferedWriter(new FileWriter(fileName));
             files.put(id, writer);
         }
         return writer;
