@@ -21,7 +21,10 @@ package org.apache.log.extractor;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOCase;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.filefilter.TrueFileFilter;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -32,9 +35,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Application to extract oozie job logs from oozie service logs
@@ -84,7 +90,11 @@ public class App {
     public static void main(String[] args) throws Exception {
         App app = new App();
         final List<File> logFiles = app.getLogFiles();
-        LineReader reader = new MultiFileReader(logFiles);
+        if (logFiles.size() > config.getInt("log.oozie.max.files")) {
+            logger.error("Too many log files: " + logFiles);
+            return;
+        }
+        PushbackLineReader reader = new MultiFileSortedPushbackReader(logFiles);
         final LogReader logReader =
             OozieLogReader.getInstance(reader);
         for (LogRecord record = logReader.readRecord(); record != null; record = logReader.readRecord()) {
@@ -98,18 +108,23 @@ public class App {
     private List<File> getLogFiles() throws IOException {
         final String logLocationPropName = "log.oozie.location";
         String[] oozieLogLocations = config.getStringArray(logLocationPropName);
+        final String logFileNamePattern = config.getString("log.oozie.filename.pattern");
         if (ArrayUtils.isEmpty(oozieLogLocations)) {
             throw new IOException("Please set property: " + logLocationPropName);
         }
-        List<File> files = new ArrayList<File>();
+        Set<File> uniqueFiles = new HashSet<File>();
         for (String oneLocation : oozieLogLocations) {
             File file = new File(oneLocation);
             if (!file.isFile()) {
-                throw new IOException("Specified file does not exit: " + oneLocation);
+                final Collection listFiles = FileUtils.listFiles(file,
+                        new WildcardFileFilter(logFileNamePattern, IOCase.INSENSITIVE),
+                        TrueFileFilter.INSTANCE);
+                uniqueFiles.addAll(listFiles);
+            } else {
+                uniqueFiles.add(file);
             }
-            files.add(file);
         }
-        return files;
+        return new ArrayList<File>(uniqueFiles);
     }
 
     public static PropertiesConfiguration getConfig() {

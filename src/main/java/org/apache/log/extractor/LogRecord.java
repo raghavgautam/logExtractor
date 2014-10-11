@@ -31,7 +31,7 @@ public class LogRecord extends ArrayList<String> {
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
         for (String s : this) {
-            stringBuilder.append(s + "\n");
+            stringBuilder.append(s);
         }
 
         return stringBuilder.toString();

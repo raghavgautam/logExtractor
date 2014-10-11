@@ -20,6 +20,7 @@ package org.apache.log.extractor;
 
 import java.io.IOException;
 
-public interface LineReader {
+public interface PushbackLineReader {
     String readLine() throws IOException;
+    void pushBack(String str);
 }

@@ -30,55 +30,49 @@ public class OozieLogReader implements LogReader {
     private static final int MaxBadRecord = 1000;
     private static final String JOB_REGEX = App.getConfig().getString("log.oozie.job.regex");
     private static final Pattern jobRegex = Pattern.compile(JOB_REGEX);
-    LineReader lineReader;
-    LogRecord readAhead;
+    PushbackLineReader lineReader;
     final String RECORD_REGEX = App.getConfig().getString("log.oozie.record.regex");
     final Pattern recordRegex = Pattern.compile(RECORD_REGEX);
 
-    private OozieLogReader(LineReader lineReader) {
+    private OozieLogReader(PushbackLineReader lineReader) {
         this.lineReader = lineReader;
     }
 
-    public static LogReader getInstance(LineReader lineReader) {
+    public static LogReader getInstance(PushbackLineReader lineReader) {
         return new OozieLogReader(lineReader);
     }
 
     @Override
     public LogRecord readRecord() throws IOException {
+        LogRecord logRecord = null;
         //read beginnings of first log record in readAhead
-        if (readAhead == null || readAhead.size() == 0) {
-            final String line = lineReader.readLine();
-            if (line == null) {
-                logger.info("processing finished.");
-                return null;
-            }
-            for(int i = 0; i <= MaxBadRecord; ++i) {
-                if( i == MaxBadRecord) {
-                    logger.warn("Bad record: " + line);
-                    throw new IOException("Found " + MaxBadRecord + " bad records. Check readAhead file");
-                }
-                if (isNewRecord(line)) {
-                    readAhead = new LogRecord(getJobId(line));
-                    readAhead.add(line);
-                    break;
-                }
-
-            }
-        }
-        //read rest of the log record
         String line = lineReader.readLine();
-        while (line != null && !isNewRecord(line)) {
-            readAhead.add(line);
+        if (line == null) {
+            logger.info("processing finished.");
+            return null;
+        }
+        for (int i = 0; i <= MaxBadRecord; ++i) {
+            if (i == MaxBadRecord) {
+                logger.warn("Bad record: " + line);
+                throw new IOException(
+                        "Found " + MaxBadRecord + " bad records. Check readAhead file");
+            }
+            if (isNewRecord(line)) {
+                logRecord = new LogRecord(getJobId(line));
+                logRecord.add(line);
+                break;
+            }
             line = lineReader.readLine();
         }
-        //save beginning of the next log record
-        LogRecord logRecord = readAhead;
-        if (line != null) {
-            readAhead = new LogRecord(getJobId(line));
-            readAhead.add(line);
-        } else {
-            readAhead = null;
+
+        //read rest of the log record
+        line = lineReader.readLine();
+        while (line != null && !isNewRecord(line)) {
+            assert logRecord != null;
+            logRecord.add(line);
+            line = lineReader.readLine();
         }
+        lineReader.pushBack(line);
         return logRecord;
     }
 
