@@ -89,14 +89,17 @@ public class App {
 
     public static void main(String[] args) throws Exception {
         App app = new App();
-        final List<File> logFiles = app.getLogFiles();
+        final String[] logLocations = config.getStringArray("log.oozie.location");
+        if (ArrayUtils.isEmpty(logLocations)) {
+            throw new IOException("Please set property: " + "log.oozie.location");
+        }
+        final List<File> logFiles = app.getLogFiles(logLocations);
         if (logFiles.size() > config.getInt("log.oozie.max.files")) {
             logger.error("Too many log files: " + logFiles);
             return;
         }
         PushbackLineReader reader = new MultiFileSortedPushbackReader(logFiles);
-        final LogReader logReader =
-            OozieLogReader.getInstance(reader);
+        final LogReader logReader = OozieLogReader.getInstance(reader);
         for (LogRecord record = logReader.readRecord(); record != null; record = logReader.readRecord()) {
             if (!StringUtils.isEmpty(record.getId())) {
                 app.getWriter(record.getId()).write(record.toString());
@@ -105,15 +108,10 @@ public class App {
         app.finish();
     }
 
-    private List<File> getLogFiles() throws IOException {
-        final String logLocationPropName = "log.oozie.location";
-        String[] oozieLogLocations = config.getStringArray(logLocationPropName);
+    private List<File> getLogFiles(String[] logLocations) throws IOException {
         final String logFileNamePattern = config.getString("log.oozie.filename.pattern");
-        if (ArrayUtils.isEmpty(oozieLogLocations)) {
-            throw new IOException("Please set property: " + logLocationPropName);
-        }
         Set<File> uniqueFiles = new HashSet<File>();
-        for (String oneLocation : oozieLogLocations) {
+        for (String oneLocation : logLocations) {
             File file = new File(oneLocation);
             if (!file.isFile()) {
                 final Collection listFiles = FileUtils.listFiles(file,
