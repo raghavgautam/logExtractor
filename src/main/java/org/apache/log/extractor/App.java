@@ -48,22 +48,40 @@ import java.util.Set;
 public class App {
     private static Logger logger = Logger.getLogger(App.class);
     private static PropertiesConfiguration config;
+    private final List<File> logFiles;
+    private String writeLocation;
 
     final Map<String, Writer> files = new HashMap<String, Writer>();
 
-    private App() {
+    private App() throws IOException, ConfigurationException {
         logger.info("***Starting App***");
-        try {
-            config = new CustomPropertiesConfiguration("logExtractor.properties");
-        } catch (ConfigurationException e) {
-            throw new RuntimeException(e);
+        config = new CustomPropertiesConfiguration("logExtractor.properties");
+        final String[] logLocations = config.getStringArray("log.oozie.location");
+        if (ArrayUtils.isEmpty(logLocations)) {
+            throw new ConfigurationException("Please set property: " + "log.oozie.location");
+        }
+        logFiles = getLogFiles(logLocations);
+        if (logFiles.size() > config.getInt("log.oozie.max.files")) {
+            logger.error("Too many log files: " + logFiles);
+            return;
+        }
+        String writeMayBe = config.getString("log.oozie.write.location");
+        if (StringUtils.isEmpty(writeMayBe)) {
+            if (logLocations.length == 1 && new File(logLocations[0]).isDirectory()) {
+                writeLocation = logLocations[0] + "/oozie_logs/";
+            } else {
+                throw new ConfigurationException("Please set property: " +
+                        "log.oozie.write.location");
+            }
+        } else {
+            writeLocation = writeMayBe;
         }
     }
 
     private Writer getWriter(String id) throws IOException {
         Writer writer = files.get(id);
         if(writer == null) {
-            final String fileName = config.getString("log.oozie.write.location") + id + ".txt";
+            final String fileName = writeLocation + id + ".txt";
             final File parentFile = new File(fileName).getParentFile();
             if (!parentFile.exists()) {
                 logger.warn("Creating directory for output logs: " + parentFile);
@@ -89,23 +107,18 @@ public class App {
 
     public static void main(String[] args) throws Exception {
         App app = new App();
-        final String[] logLocations = config.getStringArray("log.oozie.location");
-        if (ArrayUtils.isEmpty(logLocations)) {
-            throw new IOException("Please set property: " + "log.oozie.location");
-        }
-        final List<File> logFiles = app.getLogFiles(logLocations);
-        if (logFiles.size() > config.getInt("log.oozie.max.files")) {
-            logger.error("Too many log files: " + logFiles);
-            return;
-        }
+        app.segregate();
+        app.finish();
+    }
+
+    private void segregate() throws IOException {
         PushbackLineReader reader = new MultiFileSortedPushbackReader(logFiles);
         final LogReader logReader = OozieLogReader.getInstance(reader);
         for (LogRecord record = logReader.readRecord(); record != null; record = logReader.readRecord()) {
             if (!StringUtils.isEmpty(record.getId())) {
-                app.getWriter(record.getId()).write(record.toString());
+                getWriter(record.getId()).write(record.toString());
             }
         }
-        app.finish();
     }
 
     private List<File> getLogFiles(String[] logLocations) throws IOException {
