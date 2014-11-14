@@ -18,8 +18,11 @@
 
 package org.apache.log.extractor;
 
+import org.apache.commons.configuration.AbstractConfiguration;
+import org.apache.commons.configuration.CompositeConfiguration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.commons.configuration.SystemConfiguration;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOCase;
 import org.apache.commons.io.IOUtils;
@@ -47,7 +50,7 @@ import java.util.Set;
  */
 public class App {
     private static Logger logger = Logger.getLogger(App.class);
-    private static PropertiesConfiguration config;
+    private static AbstractConfiguration config;
     private final List<File> logFiles;
     private String writeLocation;
 
@@ -55,7 +58,7 @@ public class App {
 
     private App() throws IOException, ConfigurationException {
         logger.info("***Starting App***");
-        config = new CustomPropertiesConfiguration("logExtractor.properties");
+        initConfiguration();
         final String[] logLocations = config.getStringArray("log.oozie.location");
         if (ArrayUtils.isEmpty(logLocations)) {
             throw new ConfigurationException("Please set property: " + "log.oozie.location");
@@ -76,6 +79,13 @@ public class App {
         } else {
             writeLocation = writeMayBe;
         }
+    }
+
+    private void initConfiguration() throws ConfigurationException {
+        CompositeConfiguration compositeConfiguration = new CompositeConfiguration();
+        compositeConfiguration.addConfiguration(new SystemConfiguration());
+        compositeConfiguration.addConfiguration(new PropertiesConfiguration("logExtractor.properties"));
+        config = compositeConfiguration;
     }
 
     private Writer getWriter(String id) throws IOException {
@@ -138,7 +148,7 @@ public class App {
         return new ArrayList<File>(uniqueFiles);
     }
 
-    public static PropertiesConfiguration getConfig() {
+    public static AbstractConfiguration getConfig() {
         return config;
     }
 }
