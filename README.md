@@ -1,6 +1,8 @@
 Log Extractor
 =============
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/628a70c07ea5437f98d317c7dda4f4d9)](https://www.codacy.com/app/raghavgautam/logExtractor?utm_source=github.com&utm_medium=referral&utm_content=raghavgautam/logExtractor&utm_campaign=badger)
+
 Log extractor utility for extracting oozie job logs from oozie system logs
 
 
